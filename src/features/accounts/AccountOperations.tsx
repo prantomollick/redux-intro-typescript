@@ -1,4 +1,8 @@
 import { FC, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { TAppDispatch, TRootSate } from "../../store/store";
+import Swal from "sweetalert2";
+import { deposit, requestLoan, withdraw } from "./accountSlice";
 
 const AccountOperations: FC = () => {
     const [depositAmount, setDepositAmount] = useState<number>(0);
@@ -7,11 +11,57 @@ const AccountOperations: FC = () => {
     const [loanPurpose, setLoanPurpose] = useState<string>("");
     const [currency, setCurrency] = useState("USD");
 
-    function handleDeposit() {}
+    const dispatch = useDispatch<TAppDispatch>();
+    const {
+        balance,
+        loan: currentLoan,
+        loanPurpose: currentLoanPurpose,
+    } = useSelector((state: TRootSate) => state.account);
 
-    function handleWithdrawal() {}
+    function handleDeposit() {
+        if (!depositAmount) {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Please enter a valid deposit amount",
+            });
+            return; // Exit the function if depositAmount is empty
+        }
 
-    function handleRequestLoan() {}
+        dispatch(deposit(depositAmount));
+        setDepositAmount(0);
+    }
+
+    function handleWithdrawal() {
+        if (!withdrawalAmount) {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Please enter a valid withdrawal amount", // Changed text here
+            });
+
+            return;
+        }
+
+        dispatch(withdraw(withdrawalAmount));
+        setWithdrawalAmount(0);
+    }
+
+    function handleRequestLoan() {
+        if (!loanAmount || !loanPurpose) {
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "Please enter a valid loan amount and purpose", // Changed text here
+            });
+
+            return;
+        }
+
+        dispatch(requestLoan(loanAmount, loanPurpose));
+        setLoanAmount(0);
+        setLoanPurpose("");
+    }
 
     function handlePayLoan() {}
 
@@ -72,10 +122,14 @@ const AccountOperations: FC = () => {
                     <button onClick={handleRequestLoan}>Request loan</button>
                 </div>
 
-                <div>
-                    <span>Pay back $X</span>
-                    <button onClick={handlePayLoan}>Pay loan</button>
-                </div>
+                {currentLoan > 0 && (
+                    <div>
+                        <span>
+                            Pay back ${currentLoan} {currentLoanPurpose}
+                        </span>
+                        <button onClick={handlePayLoan}>Pay loan</button>
+                    </div>
+                )}
             </div>
         </div>
     );

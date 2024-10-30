@@ -9,6 +9,10 @@ const rootReducer = combineReducers({
 });
 
 const store = createStore(rootReducer);
+store.subscribe(() => {
+    console.log(store.getState());
+});
+
 export type TRootSate = ReturnType<typeof store.getState>;
 export type TAppDispatch = typeof store.dispatch;
 
