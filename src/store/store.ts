@@ -24,14 +24,19 @@ import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import accountReducer from "../features/accounts/accountSlice";
 import customerReducer from "../features/customers/customerSlice";
 
-const rootReducer = combineReducers({
-    account: accountReducer,
-    customer: customerReducer,
-});
+// const rootReducer = combineReducers({
+//     account: accountReducer,
+//     customer: customerReducer,
+// });
 
 const store = configureStore({
-    reducer: rootReducer,
+    // reducer: rootReducer,
     // No need to manually configure thunk middleware, Redux Toolkit includes it by default
+
+    reducer: {
+        account: accountReducer,
+        customer: customerReducer,
+    },
 });
 
 store.subscribe(() => {

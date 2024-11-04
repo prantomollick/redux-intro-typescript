@@ -1,22 +1,6 @@
-import type { TRootState } from "../../store/store";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-import { ThunkAction } from "redux-thunk";
-
-type AppThunk<ReturnType = void> = ThunkAction<
-    ReturnType,
-    TRootState,
-    unknown,
-    TDepositAction | { type: EActionTypes.CONVERT_CURRENCY }
->;
-
-enum EActionTypes {
-    DEPOSIT = "account/deposit",
-    WITHDRAW = "account/withdraw",
-    REQUEST_LOAN = "account/requestLoan",
-    PAY_LOAN = "account/payLoan",
-    CONVERT_CURRENCY = "account/convertCurrency",
-}
-
+// Define the interface for the initial state
 interface IInitialState {
     balance: number;
     loan: number;
@@ -24,6 +8,8 @@ interface IInitialState {
     loanPurpose: string;
     isLoading: boolean;
 }
+
+// Initialize the state with default values
 const initialState: IInitialState = {
     balance: 0,
     loan: 0,
@@ -32,111 +18,95 @@ const initialState: IInitialState = {
     isLoading: false,
 };
 
-type TDepositAction = {
-    type: EActionTypes.DEPOSIT;
-    payload: { amount: number; currency: string };
-};
-export const deposit = (
-    amount: number,
-    currency: string
-): TDepositAction | AppThunk => {
-    if (currency === "USD")
-        return {
-            type: EActionTypes.DEPOSIT,
-            payload: { amount, currency },
-        };
+//Async thunk for currency conversion
+export const convertCurrency = createAsyncThunk(
+    "account/convertCurrency",
+    async (
+        { amount, currency }: { amount: number; currency: string },
+        { dispatch }
+    ) => {
+        if (currency === "USD") {
+            dispatch(deposit({ amount, currency: "USD" }));
+            return;
+        }
 
-    return async function (dispatch) {
-        dispatch({ type: EActionTypes.CONVERT_CURRENCY });
-
-        //API call
         const res = await fetch(
             `https://api.frankfurter.app/latest?amount=${amount}&from=${currency}&to=USD`
         );
         const data = await res.json();
         const converted: number = data.rates.USD;
-        dispatch({
-            type: EActionTypes.DEPOSIT,
-            payload: { amount: converted, currency: "USD" },
-        });
-    };
-};
-type TWithdraw = {
-    type: EActionTypes.WITHDRAW;
-    payload: number;
-};
-export const withdraw = (amount: number): TWithdraw => ({
-    type: EActionTypes.WITHDRAW,
-    payload: amount,
-});
-
-type TRequestLoanAction = {
-    type: EActionTypes.REQUEST_LOAN;
-    payload: { amount: number; purpose: string };
-};
-export const requestLoan = (
-    amount: number,
-    purpose: string
-): TRequestLoanAction => ({
-    type: EActionTypes.REQUEST_LOAN,
-    payload: { amount, purpose },
-});
-
-type TAccountAction = {
-    type: EActionTypes.PAY_LOAN;
-};
-export const payLoan = (): TAccountAction => ({ type: EActionTypes.PAY_LOAN });
-
-type TAccountActions =
-    | TDepositAction
-    | TWithdraw
-    | TRequestLoanAction
-    | TAccountAction
-    | { type: EActionTypes.CONVERT_CURRENCY };
-
-function accountReducer(
-    state: IInitialState = initialState,
-    action: TAccountActions
-): IInitialState {
-    switch (action.type) {
-        case EActionTypes.DEPOSIT:
-            return {
-                ...state,
-                balance: state.balance + action.payload.amount,
-                isLoading: false,
-            };
-
-        case EActionTypes.WITHDRAW:
-            return {
-                ...state,
-                balance:
-                    state.balance >= action.payload
-                        ? state.balance - action.payload
-                        : state.balance,
-            };
-
-        case EActionTypes.REQUEST_LOAN:
-            return {
-                ...state,
-                loan: state.loan + action.payload.amount,
-                loanPurpose: action.payload.purpose,
-                balance: state.balance + action.payload.amount,
-            };
-
-        case EActionTypes.PAY_LOAN:
-            return {
-                ...state,
-                loan: 0,
-                loanPurpose: "",
-                balance: state.balance - state.loan,
-            };
-
-        case EActionTypes.CONVERT_CURRENCY:
-            return { ...state, isLoading: true };
-
-        default:
-            return state;
+        dispatch(deposit({ amount: converted, currency: "USD" }));
     }
-}
+);
 
-export default accountReducer;
+// Create the account slice
+const accountSlice = createSlice({
+    name: "account",
+    initialState,
+    reducers: {
+        // Reducer for depositing money into the account
+        deposit(
+            state,
+            action: PayloadAction<{ amount: number; currency: string }>
+        ) {
+            state.balance += action.payload.amount;
+            state.isLoading = false;
+        },
+
+        // Reducer for withdrawing money from the account
+        withdraw(state, action: PayloadAction<number>) {
+            if (state.balance >= action.payload) {
+                state.balance -= action.payload;
+            }
+        },
+
+        // requestLoan: {
+        //     // Prepare to sate send to the reducer
+        //     prepare(amount: number, purpose: string) {
+        //         return {
+        //             payload: { amount, purpose },
+        //         };
+        //     },
+
+        //     reducer(
+        //         state,
+        //         action: PayloadAction<{ amount: number; purpose: string }>
+        //     ) {
+        //         if (state.loan > 0) {
+        //             return;
+        //         }
+
+        //         state.loan = action.payload.amount;
+        //         state.loanPurpose = action.payload.purpose;
+        //         state.balance = state.balance + action.payload.amount;
+        //     },
+        // },
+
+        // Reducer for requesting a loan
+        requestLoan: (
+            state,
+            action: PayloadAction<{ amount: number; purpose: string }>
+        ) => {
+            state.loan = action.payload.amount;
+            state.loanPurpose = action.payload.purpose;
+            state.balance += action.payload.amount;
+        },
+
+        // Reducer for paying off the loan
+        payLoan(state) {
+            state.balance -= state.loan;
+            state.loan = 0;
+            state.loanPurpose = "";
+        },
+    },
+
+    extraReducers: (builder) => {
+        builder.addCase(convertCurrency.pending, (state) => {
+            state.isLoading = true;
+        });
+    },
+});
+
+// Export actions and reducer
+export const { deposit, withdraw, requestLoan, payLoan } = accountSlice.actions;
+export default accountSlice.reducer;

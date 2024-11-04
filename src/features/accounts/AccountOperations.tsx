@@ -1,8 +1,13 @@
 import { FC, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import type { TAppDispatch, TRootState } from "../../store/store";
 import Swal from "sweetalert2";
-import { deposit, requestLoan, withdraw } from "./accountSlice";
+import type { TAppDispatch, TRootState } from "../../store/store";
+import {
+    convertCurrency,
+    payLoan,
+    requestLoan,
+    withdraw,
+} from "./accountSlice";
 
 const AccountOperations: FC = () => {
     const [depositAmount, setDepositAmount] = useState<number>(0);
@@ -28,7 +33,10 @@ const AccountOperations: FC = () => {
             return; // Exit the function if depositAmount is empty
         }
 
-        dispatch(deposit(depositAmount, currency));
+        dispatch(
+            convertCurrency({ amount: depositAmount, currency: currency })
+        ); // Dispatch the deposit action
+
         setDepositAmount(0);
         setCurrency("");
     }
@@ -59,12 +67,14 @@ const AccountOperations: FC = () => {
             return;
         }
 
-        dispatch(requestLoan(loanAmount, loanPurpose));
+        dispatch(requestLoan({ amount: loanAmount, purpose: loanPurpose }));
         setLoanAmount(0);
         setLoanPurpose("");
     }
 
-    function handlePayLoan() {}
+    function handlePayLoan() {
+        dispatch(payLoan());
+    }
 
     return (
         <div>
