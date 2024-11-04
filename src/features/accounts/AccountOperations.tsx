@@ -1,6 +1,6 @@
 import { FC, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { TAppDispatch, TRootSate } from "../../store/store";
+import type { TAppDispatch, TRootState } from "../../store/store";
 import Swal from "sweetalert2";
 import { deposit, requestLoan, withdraw } from "./accountSlice";
 
@@ -13,10 +13,10 @@ const AccountOperations: FC = () => {
 
     const dispatch = useDispatch<TAppDispatch>();
     const {
-        balance,
+        isLoading,
         loan: currentLoan,
         loanPurpose: currentLoanPurpose,
-    } = useSelector((state: TRootSate) => state.account);
+    } = useSelector((state: TRootState) => state.account);
 
     function handleDeposit() {
         if (!depositAmount) {
@@ -28,8 +28,9 @@ const AccountOperations: FC = () => {
             return; // Exit the function if depositAmount is empty
         }
 
-        dispatch(deposit(depositAmount));
+        dispatch(deposit(depositAmount, currency));
         setDepositAmount(0);
+        setCurrency("");
     }
 
     function handleWithdrawal() {
@@ -88,7 +89,9 @@ const AccountOperations: FC = () => {
                     </select>
 
                     <button onClick={handleDeposit}>
-                        Deposit {depositAmount}
+                        {isLoading
+                            ? "Converting..."
+                            : `Deposit ${depositAmount}`}
                     </button>
                 </div>
 

@@ -1,5 +1,5 @@
 import { connect } from "react-redux";
-import { TRootSate } from "../../store/store";
+import type { TRootState } from "../../store/store";
 
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("en", {
@@ -12,7 +12,7 @@ function BalanceDisplay({ balance }: { balance: number }) {
     return <div className="balance">{formatCurrency(balance)}</div>;
 }
 
-function mapStateToProps(state: TRootSate) {
+function mapStateToProps(state: TRootState) {
     return {
         balance: state.account.balance,
     };

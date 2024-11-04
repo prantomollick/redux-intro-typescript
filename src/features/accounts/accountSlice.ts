@@ -1,30 +1,66 @@
+import type { TRootState } from "../../store/store";
+
+import { ThunkAction } from "redux-thunk";
+
+type AppThunk<ReturnType = void> = ThunkAction<
+    ReturnType,
+    TRootState,
+    unknown,
+    TDepositAction | { type: EActionTypes.CONVERT_CURRENCY }
+>;
+
 enum EActionTypes {
     DEPOSIT = "account/deposit",
     WITHDRAW = "account/withdraw",
     REQUEST_LOAN = "account/requestLoan",
     PAY_LOAN = "account/payLoan",
+    CONVERT_CURRENCY = "account/convertCurrency",
 }
 
 interface IInitialState {
     balance: number;
     loan: number;
+    currency: string;
     loanPurpose: string;
+    isLoading: boolean;
 }
 const initialState: IInitialState = {
     balance: 0,
     loan: 0,
     loanPurpose: "",
+    currency: "USD",
+    isLoading: false,
 };
 
 type TDepositAction = {
     type: EActionTypes.DEPOSIT;
-    payload: number;
+    payload: { amount: number; currency: string };
 };
-export const deposit = (amount: number): TDepositAction => ({
-    type: EActionTypes.DEPOSIT,
-    payload: amount,
-});
+export const deposit = (
+    amount: number,
+    currency: string
+): TDepositAction | AppThunk => {
+    if (currency === "USD")
+        return {
+            type: EActionTypes.DEPOSIT,
+            payload: { amount, currency },
+        };
 
+    return async function (dispatch) {
+        dispatch({ type: EActionTypes.CONVERT_CURRENCY });
+
+        //API call
+        const res = await fetch(
+            `https://api.frankfurter.app/latest?amount=${amount}&from=${currency}&to=USD`
+        );
+        const data = await res.json();
+        const converted: number = data.rates.USD;
+        dispatch({
+            type: EActionTypes.DEPOSIT,
+            payload: { amount: converted, currency: "USD" },
+        });
+    };
+};
 type TWithdraw = {
     type: EActionTypes.WITHDRAW;
     payload: number;
@@ -55,7 +91,8 @@ type TAccountActions =
     | TDepositAction
     | TWithdraw
     | TRequestLoanAction
-    | TAccountAction;
+    | TAccountAction
+    | { type: EActionTypes.CONVERT_CURRENCY };
 
 function accountReducer(
     state: IInitialState = initialState,
@@ -63,7 +100,11 @@ function accountReducer(
 ): IInitialState {
     switch (action.type) {
         case EActionTypes.DEPOSIT:
-            return { ...state, balance: state.balance + action.payload };
+            return {
+                ...state,
+                balance: state.balance + action.payload.amount,
+                isLoading: false,
+            };
 
         case EActionTypes.WITHDRAW:
             return {
@@ -89,6 +130,9 @@ function accountReducer(
                 loanPurpose: "",
                 balance: state.balance - state.loan,
             };
+
+        case EActionTypes.CONVERT_CURRENCY:
+            return { ...state, isLoading: true };
 
         default:
             return state;
