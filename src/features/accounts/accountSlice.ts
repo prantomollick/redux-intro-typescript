@@ -18,9 +18,9 @@ const initialState: IInitialState = {
     isLoading: false,
 };
 
-//Async thunk for currency conversion
-export const convertCurrency = createAsyncThunk(
-    "account/convertCurrency",
+// Async thunk for currency conversion
+export const depositAsync = createAsyncThunk(
+    "account/depositAsync",
     async (
         { amount, currency }: { amount: number; currency: string },
         { dispatch }
@@ -45,12 +45,17 @@ const accountSlice = createSlice({
     initialState,
     reducers: {
         // Reducer for depositing money into the account
-        deposit(
-            state,
-            action: PayloadAction<{ amount: number; currency: string }>
-        ) {
-            state.balance += action.payload.amount;
-            state.isLoading = false;
+        deposit: {
+            prepare(payload: { amount: number; currency: string }) {
+                return { payload };
+            },
+            reducer(
+                state,
+                action: PayloadAction<{ amount: number; currency: string }>
+            ) {
+                state.balance += action.payload.amount;
+                state.isLoading = false;
+            },
         },
 
         // Reducer for withdrawing money from the account
@@ -60,36 +65,23 @@ const accountSlice = createSlice({
             }
         },
 
-        // requestLoan: {
-        //     // Prepare to sate send to the reducer
-        //     prepare(amount: number, purpose: string) {
-        //         return {
-        //             payload: { amount, purpose },
-        //         };
-        //     },
-
-        //     reducer(
-        //         state,
-        //         action: PayloadAction<{ amount: number; purpose: string }>
-        //     ) {
-        //         if (state.loan > 0) {
-        //             return;
-        //         }
-
-        //         state.loan = action.payload.amount;
-        //         state.loanPurpose = action.payload.purpose;
-        //         state.balance = state.balance + action.payload.amount;
-        //     },
-        // },
-
         // Reducer for requesting a loan
-        requestLoan: (
-            state,
-            action: PayloadAction<{ amount: number; purpose: string }>
-        ) => {
-            state.loan = action.payload.amount;
-            state.loanPurpose = action.payload.purpose;
-            state.balance += action.payload.amount;
+        requestLoan: {
+            prepare(amount: number, purpose: string) {
+                return {
+                    payload: { amount, purpose },
+                };
+            },
+            reducer(
+                state,
+                action: PayloadAction<{ amount: number; purpose: string }>
+            ) {
+                if (state.loan === 0) {
+                    state.loan = action.payload.amount;
+                    state.loanPurpose = action.payload.purpose;
+                    state.balance += action.payload.amount;
+                }
+            },
         },
 
         // Reducer for paying off the loan
@@ -99,10 +91,15 @@ const accountSlice = createSlice({
             state.loanPurpose = "";
         },
     },
-
     extraReducers: (builder) => {
-        builder.addCase(convertCurrency.pending, (state) => {
+        builder.addCase(depositAsync.pending, (state) => {
             state.isLoading = true;
+        });
+        builder.addCase(depositAsync.fulfilled, (state) => {
+            state.isLoading = false;
+        });
+        builder.addCase(depositAsync.rejected, (state) => {
+            state.isLoading = false;
         });
     },
 });

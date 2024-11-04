@@ -3,7 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import Swal from "sweetalert2";
 import type { TAppDispatch, TRootState } from "../../store/store";
 import {
-    convertCurrency,
+    deposit,
+    depositAsync,
     payLoan,
     requestLoan,
     withdraw,
@@ -33,9 +34,7 @@ const AccountOperations: FC = () => {
             return; // Exit the function if depositAmount is empty
         }
 
-        dispatch(
-            convertCurrency({ amount: depositAmount, currency: currency })
-        ); // Dispatch the deposit action
+        dispatch(depositAsync({ amount: depositAmount, currency })); // Dispatch the deposit action
 
         setDepositAmount(0);
         setCurrency("");
@@ -67,7 +66,7 @@ const AccountOperations: FC = () => {
             return;
         }
 
-        dispatch(requestLoan({ amount: loanAmount, purpose: loanPurpose }));
+        dispatch(requestLoan(loanAmount, loanPurpose));
         setLoanAmount(0);
         setLoanPurpose("");
     }
